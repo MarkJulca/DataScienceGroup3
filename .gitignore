@@ -190,7 +190,7 @@ ehthumbs_vista.db
 *~
 
 # Project specific
-data/raw/*
+
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
@@ -199,6 +199,3 @@ models/*.joblib
 logs/*.log
 !logs/.gitkeep
 
-# Data files
-src/preprocessing/data/*
-src/preprocessing/data/*
