@@ -1,24 +1,16 @@
 import os
 import sys
+import warnings
 from typing import Any, Dict, Optional, Tuple
+
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.tree import DecisionTreeClassifier
 
 # add project src to path (so preprocessing.preprocess can be imported)
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
-import joblib
-import warnings
-
-import numpy as np
-import pandas as pd
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
-
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-
-# silence warnings (production style)
-warnings.filterwarnings("ignore")
 
 # Import your TabularPreprocessor and convenience wrapper
 try:
@@ -29,6 +21,9 @@ try:
 except Exception:
     # If direct import fails, try alternative relative import (depends on layout)
     from preprocess import TabularPreprocessor, preprocess_for_model  # type: ignore
+
+# silence warnings (production style)
+warnings.filterwarnings("ignore")
 
 
 class TabularTrainer:
@@ -120,7 +115,7 @@ class TabularTrainer:
 
             # Predict on test set and calculate multiple metrics
             y_pred = clf.predict(X_test)
-            
+
             # Calculate all metrics (same as kaggle_data_cleaning.ipynb)
             metrics = {
                 'accuracy': float(accuracy_score(y_test, y_pred)),
@@ -148,7 +143,7 @@ class TabularTrainer:
         # (Random Forest was the best model in the original analysis)
         if chosen_model_name is None:
             chosen_model_name = "random_forest"
-        
+
         if chosen_model_name not in self.models:
             raise KeyError(f"Model '{chosen_model_name}' not found among trained models. Trained models: {list(self.models.keys())}")
 
@@ -176,7 +171,7 @@ class TabularTrainer:
 
 
 # Minimal script entrypoint (silent)
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Configuration according to your instructions
     DATA_PATH = "../src/data/cleaned_raw/dataset_cleaned_final.csv"
     SAVE_PATH = "../src/modelo/modelo_training.pkl"

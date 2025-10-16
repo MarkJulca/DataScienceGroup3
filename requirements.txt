@@ -1,3 +1,13 @@
+# API & Modeling
+fastapi==0.104.0
+uvicorn[standard]==0.23.2
+pydantic==2.4.2
+scikit-learn
+pandas
+numpy
+joblib==1.3.2
+httpx==0.25.2
+
 # Validation and code quality tools
 pre-commit==3.3.3
 black==23.3.0
