@@ -1,7 +1,6 @@
-import os
-import sys
 from io import BytesIO
-from typing import List, Tuple, Dict, Optional, Any, Union
+from contextlib import suppress
+from typing import List, Tuple, Dict, Optional, Any
 
 import numpy as np
 import pandas as pd
@@ -145,11 +144,11 @@ class TabularPreprocessor:
 
         if self.config.get("fill_whitespace_with_nan", True):
             str_cols = df.select_dtypes(include=["object", "string"]).columns
-            for c in str_cols:
+            for col in str_cols:
                 # strip whitespace
-                df[c] = df[c].astype("string").str.strip()
+                df[col] = df[col].astype("string").str.strip()
                 # empty strings -> NA
-                df[c] = df[c].replace("", pd.NA)
+                df[col] = df[col].replace("", pd.NA)
 
         return df
 
@@ -262,7 +261,7 @@ class TabularPreprocessor:
 
         # Fit & transform
         feature_df = df.drop(columns=[target_col])
-        y = df[target_col].copy()
+        target_series = df[target_col].copy()
 
         # Fit the column transformer
         transformed_array = column_transformer.fit_transform(feature_df)
@@ -285,26 +284,24 @@ class TabularPreprocessor:
             out_feature_names.extend(self.ordinal_columns)
 
         # Construct DataFrame
-        X = pd.DataFrame(transformed_array, columns=out_feature_names, index=feature_df.index)
+        feature_df = pd.DataFrame(transformed_array, columns=out_feature_names, index=feature_df.index)
 
         # Save fitted encoders/scalers explicitly if necessary:
         # - self.numeric_imputer, self.categorical_imputer already set
         # - self.scaler: extract if present inside the pipeline
         # Attempt to find scaler instance within transformer
-        try:
-            if self.numeric_columns:
-                num_transformer = [t for name, t, cols in self.column_transformer.transformers_ if name == "num"]
-                if num_transformer:
-                    # pipeline steps inside are accessible via named_steps
-                    pipeline = num_transformer[0]
-                    if "scaler" in pipeline.named_steps:
-                        self.scaler = pipeline.named_steps["scaler"]
-        except Exception:
-            # silent fallback
-            pass
+        if self.column_transformer:
+            with suppress(Exception):
+                if self.numeric_columns:
+                    num_transformer = [t for name, t, cols in self.column_transformer.transformers_ if name == "num"]
+                    if num_transformer:
+                        # pipeline steps inside are accessible via named_steps
+                        pipeline = num_transformer[0]
+                        if "scaler" in pipeline.named_steps:
+                            self.scaler = pipeline.named_steps["scaler"]
 
         self.is_fitted = True
-        return X, y
+        return feature_df, target_series
 
     def transform_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -323,8 +320,8 @@ class TabularPreprocessor:
             out_feature_names.extend(list(self.onehot_encoder.get_feature_names_out(self.onehot_columns)))
         if self.ordinal_columns:
             out_feature_names.extend(self.ordinal_columns)
-        X = pd.DataFrame(transformed_array, columns=out_feature_names, index=feature_df.index)
-        return X
+        feature_df = pd.DataFrame(transformed_array, columns=out_feature_names, index=feature_df.index)
+        return feature_df
 
     # ---------------------------
     # Public convenience methods
@@ -366,14 +363,16 @@ class TabularPreprocessor:
             raise RuntimeError("Preprocessor not fitted yet. Call prepare_for_training() first.")
 
         df_clean = self.clean_data(df)
-        X = self.transform_features(df_clean)
-        return X
+        feature_df = self.transform_features(df_clean)
+        return feature_df
 
     # ---------------------------
     # Utility: inverse transform for ordinal and scaling (if needed)
     # ---------------------------
     def inverse_transform_numeric(self, arr: np.ndarray) -> np.ndarray:
-        """Inverse transform numeric columns if scaler fitted."""
+        """
+        Inverse transform numeric columns if scaler fitted.
+        """
         if self.scaler is None:
             raise RuntimeError("No scaler available.")
         return self.scaler.inverse_transform(arr)
@@ -443,10 +442,10 @@ def preprocess_for_model(
 
 
 # If module executed as script, provide a minimal run example (silent - returns nothing)
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Example usage (commented out because script is silent by default)
     # X_train, y_train, X_test, y_test, prep = preprocess_for_model("dataset_cleaned_final.csv", "logistic", target_col="Target")
     pass
-#Retorno: preprocess_for_model() devuelve
+# Retorno: preprocess_for_model() devuelve
 # (X_train, y_train, X_test, y_test, preprocessor) para que puedas acceder
 #  a transformadores y columnas cuando entrenes/guardes modelos.
